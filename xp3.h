@@ -41,7 +41,7 @@ struct entry_info
 	uint64_t plain_sz;
 	uint64_t zip_sz;
 	uint16_t path_sz;
-	uint16_t path[100]; // UTF-16 LE, path separator: '/'
+	uint16_t path[256]; // UTF-16 LE, path separator: '/'
 };
 
 struct entry_segm

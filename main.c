@@ -32,19 +32,9 @@ struct file_list *last = 0;
 
 void add(struct file_list *node)
 {
+	// the order is inversed, do not write package in fworker
 	node->next = last;
 	last = node;
-}
-
-void pnodes()
-{
-	struct file_list *n = last;
-	while(n)
-	{
-		printf("[+] [%p] [%08x] %ld\t%d\t%s\n",
-			n->solid_buf, n->adlr, n->size, n->u16path_len, n->path);
-		n = n->next;
-	}
 }
 
 // process pack and every file
@@ -64,7 +54,7 @@ int fworker(const char *fpath, const struct stat *sb,int typeflag, struct FTW *f
 	node->size = sb->st_size;
 	node->solid_buf = fop_map_file_ro_with_size(fpath, sb->st_size);
 	node->adlr = get_adler32(node->solid_buf, node->size);
-	node->z_size = zip_and_write(out_fd, node->solid_buf, node->size);
+	node->z_size = node->size; // init
 
 	add(node);
 	printf("[+] %s\n", omit);
@@ -72,6 +62,85 @@ int fworker(const char *fpath, const struct stat *sb,int typeflag, struct FTW *f
 	return 0;
 }
 
+void mkpack()
+{
+	// 1. get file table offset
+	uint64_t ft_loc = sizeof(struct xp3_hdr);
+	int count = 0;
+	struct file_list *n = last;
+	while(n)
+	{
+		++count;
+		n->z_size = zip_and_write(out_fd, n->solid_buf, n->size);
+		ft_loc += n->z_size;		
+		n = n->next;
+	}
+
+	// 2. prepare ft buff
+	char *p = malloc(sizeof(struct xp3_ft_hdr) + count * (
+		sizeof(struct entry_hdr) + sizeof(struct entry_info)
+		+ sizeof(struct entry_segm) + sizeof(struct entry_adlr)));
+	struct xp3_ft_hdr *ft = (struct xp3_ft_hdr*)p;
+	char *beg = p = (char *)(ft + 1);
+
+	n = last;
+	uint64_t g_off = sizeof(struct xp3_hdr);
+	while(n)
+	{
+		struct entry_adlr adlr = {
+			.magic = mag_adlr,
+			.this_sz = 0x04,
+			.hash = n->adlr,
+		};
+		struct entry_segm segm = {
+			.magic = mag_segm,
+			.this_sz = 0x1c,
+			.is_zipped = 1,
+			.plain_sz = n->size,
+			.zip_sz = n->z_size,
+			.offset = g_off,
+		};
+		struct entry_info info = {
+			.magic = mag_info,
+			.is_enc = 0,
+			.plain_sz = n->size,
+			.zip_sz = n->z_size,
+			.path_sz = n->u16path_len,
+		};
+		memcpy(info.path, n->u16path, n->u16path_len * 2);
+		info.this_sz = 0x16 + info.path_sz * 2;
+		struct entry_hdr file = {
+			.magic = mag_file,
+			.entry_sz = adlr.this_sz + segm.this_sz + info.this_sz + 3 * 0xc,
+		};
+
+		memcpy(p, &file, sizeof(file));
+		p += sizeof(file);
+		memcpy(p, &info, info.this_sz + 0xc);
+		p += info.this_sz + 0xc;
+		memcpy(p, &segm, segm.this_sz + 0xc);
+		p += segm.this_sz + 0xc;
+		memcpy(p, &adlr, adlr.this_sz + 0xc);
+		p += adlr.this_sz + 0xc;
+
+		g_off += n->z_size;
+		n = n->next;
+	}
+	
+	ft->is_zipped = 1;
+	ft->plain_sz = p - beg;
+	write(out_fd, ft, sizeof(struct xp3_ft_hdr));
+
+	ft->zip_sz = zip_and_write(out_fd, ft + 1, ft->plain_sz);
+
+	lseek(out_fd, 0xb, SEEK_SET);
+	write(out_fd, &ft_loc, sizeof(ft_loc));
+
+	lseek(out_fd, ft_loc + 1, SEEK_SET);
+	write(out_fd, &(ft->zip_sz), sizeof(ft->zip_sz));
+
+	free(ft);
+}
 
 
 int main(int argc, char **argv)
@@ -110,11 +179,11 @@ int main(int argc, char **argv)
 	memcpy(hdr.magic, "\x58\x50\x33\x0D\x0A\x20\x0A\x1A\x8B\x67\x01", 0xb);
 	write(out_fd, &hdr, sizeof(hdr));
 
-	// compress the files
+	// get info of files
 	nftw(argv[1], fworker, 20, 0);
 
-	// generate file table
-	
+	// make the package
+	mkpack();
 
 	// clean up
 	close(out_fd);
