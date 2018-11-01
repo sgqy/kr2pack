@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #include "fileops.h"
 
@@ -49,6 +50,39 @@ end:
     }
 
     *sz = size;
+    return p;
+}
+
+void *fop_map_file_ro_with_size (const char *fn, const uintptr_t size)
+{
+
+    int fd = 0;
+    void *p = 0;
+
+    fd = open (fn, O_RDONLY);
+
+    if (fd < 0)
+    {
+        printf("[-] open %s: %s\n", fn, strerror(errno));
+        goto end;
+    }
+
+    p = mmap (0, size, PROT_READ, MAP_SHARED, fd, 0);
+
+    if (p == MAP_FAILED)
+    {
+        printf("[-] map %s: %s\n", fn, strerror(errno));
+        p = 0;
+        goto end;
+    }
+
+end:
+
+    if (fd >= 0)
+    {
+        close (fd);
+    }
+
     return p;
 }
 
