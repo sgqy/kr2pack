@@ -1,3 +1,5 @@
 *.o
 *.swp
 .vscode
+*.xp3
+kr2packer
