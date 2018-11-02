@@ -2,8 +2,8 @@
 #define __FILEOPS_H__
 
 #include <stdint.h>
-void *fop_map_file_ro (const char *fn, uintptr_t *size);
-void *fop_map_file_ro_with_size (const char *fn, const uintptr_t size);
-void fop_unmap_file (void *p, uintptr_t size);
+void *fop_map_file_ro(const char *fn, uintptr_t *size);
+void *fop_map_file_ro_with_size(const char *fn, const uintptr_t size);
+void  fop_unmap_file(void *p, uintptr_t size);
 
 #endif // __FILEOPS_H__

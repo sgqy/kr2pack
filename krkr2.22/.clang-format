@@ -1,0 +1,23 @@
+BasedOnStyle: LLVM
+ColumnLimit: 120
+IndentWidth: 8
+UseTab: ForIndentation
+BreakBeforeBraces: Linux
+
+AllowShortIfStatementsOnASingleLine: false
+IndentCaseLabels: false
+
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+AlignAfterOpenBracket: Align
+
+AlignEscapedNewlines: Left
+AlignOperands: true
+AlignTrailingComments: true
+AllowAllParametersOfDeclarationOnNextLine: true
+
+AllowShortBlocksOnASingleLine: false
+AllowShortFunctionsOnASingleLine: false
+
+PointerAlignment: Right
+

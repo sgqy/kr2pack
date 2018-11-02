@@ -1,10 +1,10 @@
+#include <malloc.h>
 #include <stdio.h>
 #include <string.h>
-#include <malloc.h>
 
+#include <fcntl.h>
 #include <ftw.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 #include <zlib.h>
 
@@ -16,15 +16,14 @@
 #include "xp3.h"
 
 // file list to save info
-struct file_list
-{
-	char path[256];
-	uint16_t u16path_len;
-	uint16_t u16path[256];
-	uintptr_t size;
-	char *solid_buf;
-	uint32_t adlr;
-	uintptr_t z_size;
+struct file_list {
+	char              path[256];
+	uint16_t          u16path_len;
+	uint16_t          u16path[256];
+	uintptr_t         size;
+	char *            solid_buf;
+	uint32_t          adlr;
+	uintptr_t         z_size;
 	struct file_list *next;
 };
 
@@ -34,27 +33,27 @@ void add(struct file_list *node)
 {
 	// the order is inversed, do not write package in fworker
 	node->next = last;
-	last = node;
+	last       = node;
 }
 
 // process pack and every file
 
 int out_fd = 0;
 
-int fworker(const char *fpath, const struct stat *sb,int typeflag, struct FTW *ftwbuf)
+int fworker(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
-	if(typeflag != FTW_F)
-	{
+	if (typeflag != FTW_F) {
 		return 0;
 	}
 	struct file_list *node = malloc(sizeof(struct file_list));
+
 	strcpy(node->path, fpath);
-	const char *omit = strchr(fpath, '/') + 1;
-	node->u16path_len = u8u16str((uint8_t*)omit, node->u16path);
-	node->size = sb->st_size;
-	node->solid_buf = fop_map_file_ro_with_size(fpath, sb->st_size);
-	node->adlr = get_adler32(node->solid_buf, node->size);
-	node->z_size = node->size; // init
+	const char *omit  = strchr(fpath, '/') + 1;
+	node->u16path_len = u8u16str((uint8_t *)omit, node->u16path);
+	node->size        = sb->st_size;
+	node->solid_buf   = fop_map_file_ro_with_size(fpath, sb->st_size);
+	node->adlr        = get_adler32(node->solid_buf, node->size);
+	node->z_size      = node->size; // init
 
 	add(node);
 	printf("[+] %s\n", omit);
@@ -65,53 +64,50 @@ int fworker(const char *fpath, const struct stat *sb,int typeflag, struct FTW *f
 void mkpack()
 {
 	// 1. get file table offset
-	uint64_t ft_loc = sizeof(struct xp3_hdr);
-	int count = 0;
-	struct file_list *n = last;
-	while(n)
-	{
+	uint64_t          ft_loc = sizeof(struct xp3_hdr);
+	int               count  = 0;
+	struct file_list *n      = last;
+	while (n) {
 		++count;
 		n->z_size = zip_and_write(out_fd, n->solid_buf, n->size);
-		ft_loc += n->z_size;		
+		ft_loc += n->z_size;
 		n = n->next;
 	}
 
 	// 2. prepare ft buff
-	char *p = malloc(sizeof(struct xp3_ft_hdr) + count * (
-		sizeof(struct entry_hdr) + sizeof(struct entry_info)
-		+ sizeof(struct entry_segm) + sizeof(struct entry_adlr)));
-	struct xp3_ft_hdr *ft = (struct xp3_ft_hdr*)p;
-	char *beg = p = (char *)(ft + 1);
+	char *p = malloc(sizeof(struct xp3_ft_hdr) + count * (sizeof(struct entry_hdr) + sizeof(struct entry_info) +
+	                                                      sizeof(struct entry_segm) + sizeof(struct entry_adlr)));
+	struct xp3_ft_hdr *ft  = (struct xp3_ft_hdr *)p;
+	char *             beg = p = (char *)(ft + 1);
+	uint64_t           g_off   = sizeof(struct xp3_hdr);
 
 	n = last;
-	uint64_t g_off = sizeof(struct xp3_hdr);
-	while(n)
-	{
+	while (n) {
 		struct entry_adlr adlr = {
-			.magic = mag_adlr,
-			.this_sz = 0x04,
-			.hash = n->adlr,
+		    .magic   = mag_adlr,
+		    .this_sz = 0x04,
+		    .hash    = n->adlr,
 		};
 		struct entry_segm segm = {
-			.magic = mag_segm,
-			.this_sz = 0x1c,
-			.is_zipped = 1,
-			.plain_sz = n->size,
-			.zip_sz = n->z_size,
-			.offset = g_off,
+		    .magic     = mag_segm,
+		    .this_sz   = 0x1c,
+		    .is_zipped = 1,
+		    .plain_sz  = n->size,
+		    .zip_sz    = n->z_size,
+		    .offset    = g_off,
 		};
 		struct entry_info info = {
-			.magic = mag_info,
-			.is_enc = 0,
-			.plain_sz = n->size,
-			.zip_sz = n->z_size,
-			.path_sz = n->u16path_len,
+		    .magic    = mag_info,
+		    .is_enc   = 0,
+		    .plain_sz = n->size,
+		    .zip_sz   = n->z_size,
+		    .path_sz  = n->u16path_len,
 		};
 		memcpy(info.path, n->u16path, n->u16path_len * 2);
-		info.this_sz = 0x16 + info.path_sz * 2;
+		info.this_sz          = 0x16 + info.path_sz * 2;
 		struct entry_hdr file = {
-			.magic = mag_file,
-			.entry_sz = adlr.this_sz + segm.this_sz + info.this_sz + 3 * 0xc,
+		    .magic    = mag_file,
+		    .entry_sz = adlr.this_sz + segm.this_sz + info.this_sz + 3 * 0xc,
 		};
 
 		memcpy(p, &file, sizeof(file));
@@ -126,9 +122,9 @@ void mkpack()
 		g_off += n->z_size;
 		n = n->next;
 	}
-	
+
 	ft->is_zipped = 1;
-	ft->plain_sz = p - beg;
+	ft->plain_sz  = p - beg;
 	write(out_fd, ft, sizeof(struct xp3_ft_hdr));
 
 	ft->zip_sz = zip_and_write(out_fd, ft + 1, ft->plain_sz);
@@ -142,25 +138,19 @@ void mkpack()
 	free(ft);
 }
 
-
 int main(int argc, char **argv)
 {
-	if(argc != 2)
-	{
+	if (argc != 2) {
 		printf("%s <dir>\n    output: <dir>.xp3\n", argv[0]);
 		return 1;
 	}
 
 	// copy a package file name
 	char out_fn[300];
-	for(int i = 0; i < strlen(argv[1]); ++i)
-	{
-		if(strchr("./\\?!@#$%%^&*()-=+`~|\"\';:<>", argv[1][i]) != 0)
-		{
+	for (int i = 0; i < strlen(argv[1]); ++i) {
+		if (strchr("./\\?!@#$%%^&*()-=+`~|\"\';:<>", argv[1][i]) != 0) {
 			out_fn[i] = '_';
-		}
-		else
-		{
+		} else {
 			out_fn[i] = argv[1][i];
 		}
 	}
@@ -168,8 +158,7 @@ int main(int argc, char **argv)
 
 	// create file
 	out_fd = open(out_fn, O_CREAT | O_TRUNC | O_RDWR, 0664);
-	if(out_fd < 0)
-	{
+	if (out_fd < 0) {
 		printf("[-] failed to create %s\n", out_fn);
 		return 1;
 	}
