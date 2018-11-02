@@ -50,7 +50,7 @@ int fworker(const char *fpath, const struct stat *sb,int typeflag, struct FTW *f
 	struct file_list *node = malloc(sizeof(struct file_list));
 	strcpy(node->path, fpath);
 	const char *omit = strchr(fpath, '/') + 1;
-	node->u16path_len = u8u16str(omit, node->u16path);
+	node->u16path_len = u8u16str((uint8_t*)omit, node->u16path);
 	node->size = sb->st_size;
 	node->solid_buf = fop_map_file_ro_with_size(fpath, sb->st_size);
 	node->adlr = get_adler32(node->solid_buf, node->size);

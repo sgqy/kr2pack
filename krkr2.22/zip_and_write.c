@@ -12,7 +12,7 @@ uintptr_t zip_and_write(int fd, const void *buf, const uintptr_t size)
 {
         char *zip = malloc(size);
         uintptr_t zsize = size;
-        int res = compress2(zip, &zsize, buf, size, 9);
+        int res = compress2((Bytef*)zip, &zsize, buf, size, 9);
         if(res != Z_OK)
         {
                 printf("[-] zlib fail: %d\n", res);

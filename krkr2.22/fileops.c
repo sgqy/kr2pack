@@ -22,6 +22,7 @@ void *fop_map_file_ro (const char *fn, uintptr_t *sz)
         printf("[-] stat %s: %s\n", fn, strerror(errno));
         return 0;
     }
+    *sz = sb.st_size;
     return fop_map_file_ro_with_size(fn, sb.st_size);
 }
 
