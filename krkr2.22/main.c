@@ -57,6 +57,7 @@ int fworker(const char *fpath, const struct stat *sb, int typeflag, struct FTW *
 	struct file_list *node = malloc(sizeof(struct file_list));
 
 	strcpy(node->path, fpath);
+	memset(node->u16path, 0, 256 * 2);
 	node->u16path_len = u8u16str(omit_path(node->path), node->u16path);
 	node->size        = sb->st_size;
 	node->solid_buf   = fop_map_file_ro_with_size(fpath, sb->st_size);
@@ -64,7 +65,7 @@ int fworker(const char *fpath, const struct stat *sb, int typeflag, struct FTW *
 	node->z_size      = node->size; // init
 
 	add(node);
-	printf("[+] [scan] %s\n", omit_path(node->path));
+	printf("[+] [scan] [%08x] %s\n", node->adlr, omit_path(node->path));
 
 	return 0;
 }

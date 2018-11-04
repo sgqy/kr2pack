@@ -18,3 +18,31 @@ int u8u16str(const uint8_t *u8, uint16_t *u16)
 	}
 	return ret;
 }
+
+int u16u8str(const uint16_t *u16, uint8_t *u8)
+{
+	int ret = 0;
+	while (*u16) {
+		if (*u16 < 0xD800 || *u16 > 0xDBFF) {
+			int a = ucs2_to_utf8(*u16, u8);
+			if (a < 0) {
+				return ret;
+			}
+			u8 += a;
+			u16 += 1;
+			ret += a;
+		} else {
+			if (*(u16 + 1) == 0) {
+				return ret;
+			}
+			int a = surrogate_to_utf8(*u16, *(u16 + 1), u8);
+			if (a < 0) {
+				return ret;
+			}
+			u8 += a;
+			u16 += 2;
+			ret += a;
+		}
+	}
+	return ret;
+}
