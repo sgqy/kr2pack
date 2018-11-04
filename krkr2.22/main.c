@@ -40,6 +40,15 @@ void add(struct file_list *node)
 
 int out_fd = 0;
 
+const uint8_t *omit_path(const char *path)
+{
+	const char *ret = strchr(path, '/');
+	if (ret) {
+		return ret + 1;
+	}
+	return path;
+}
+
 int fworker(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
 	if (typeflag != FTW_F) {
@@ -48,15 +57,14 @@ int fworker(const char *fpath, const struct stat *sb, int typeflag, struct FTW *
 	struct file_list *node = malloc(sizeof(struct file_list));
 
 	strcpy(node->path, fpath);
-	const char *omit  = strchr(fpath, '/') + 1;
-	node->u16path_len = u8u16str((uint8_t *)omit, node->u16path);
+	node->u16path_len = u8u16str(omit_path(node->path), node->u16path);
 	node->size        = sb->st_size;
 	node->solid_buf   = fop_map_file_ro_with_size(fpath, sb->st_size);
 	node->adlr        = get_adler32(node->solid_buf, node->size);
 	node->z_size      = node->size; // init
 
 	add(node);
-	printf("[+] %s\n", omit);
+	printf("[+] [scan] %s\n", omit_path(node->path));
 
 	return 0;
 }
@@ -70,6 +78,7 @@ void mkpack()
 	while (n) {
 		++count;
 		n->z_size = zip_and_write(out_fd, n->solid_buf, n->size);
+		printf("[+] [zip] %s\n", omit_path(n->path));
 		ft_loc += n->z_size;
 		n = n->next;
 	}
@@ -146,8 +155,8 @@ int main(int argc, char **argv)
 	}
 
 	// copy a package file name
-	char out_fn[300];
-	for (int i = 0; i < strlen(argv[1]); ++i) {
+	char out_fn[300] = {0};
+	for (int i = 0; argv[1][i]; ++i) {
 		if (strchr("./\\?!@#$%%^&*()-=+`~|\"\';:<>", argv[1][i]) != 0) {
 			out_fn[i] = '_';
 		} else {
