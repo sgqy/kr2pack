@@ -10,4 +10,4 @@ kr2packer: main.o fileops.o get_adler.o u8u16str.o unicode.o zip_and_write.o
 	gcc -o $@ $^ -lz
 
 clean:
-	rm -f *.o kr2packer
+	rm -f *.o kr2packer packerchk
