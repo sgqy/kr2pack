@@ -8,7 +8,8 @@ uint32_t get_adler32(const void *buf, const uintptr_t size)
 	const uint8_t  cutbit = 31;
 	const uint32_t cutsz  = 1 << cutbit;
 	uint32_t       count  = size >> cutbit;
-	for (uint32_t i = 0; i < count; ++i) {
+	for (uint32_t i = 0; i < count; ++i)
+	{
 		ret = adler32(ret, buf + i * cutsz, cutsz);
 	}
 	uintptr_t rsz = size - count * cutsz;

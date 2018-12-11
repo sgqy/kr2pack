@@ -17,7 +17,8 @@ void *fop_map_file_ro(const char *fn, uintptr_t *sz)
 {
 	struct stat sb;
 	int         r = stat(fn, &sb);
-	if (r < 0) {
+	if (r < 0)
+	{
 		printf("[-] stat %s: %s\n", fn, strerror(errno));
 		return 0;
 	}
@@ -33,14 +34,16 @@ void *fop_map_file_ro_with_size(const char *fn, const uintptr_t size)
 
 	fd = open(fn, O_RDONLY);
 
-	if (fd < 0) {
+	if (fd < 0)
+	{
 		printf("[-] open %s: %s\n", fn, strerror(errno));
 		goto end;
 	}
 
 	p = mmap(0, size, PROT_READ, MAP_SHARED, fd, 0);
 
-	if (p == MAP_FAILED) {
+	if (p == MAP_FAILED)
+	{
 		printf("[-] map %s: %s\n", fn, strerror(errno));
 		p = 0;
 		goto end;
@@ -48,7 +51,8 @@ void *fop_map_file_ro_with_size(const char *fn, const uintptr_t size)
 
 end:
 
-	if (fd >= 0) {
+	if (fd >= 0)
+	{
 		close(fd);
 	}
 

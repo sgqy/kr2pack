@@ -16,7 +16,8 @@
 #include "xp3.h"
 
 // file list to save info
-struct file_list {
+struct file_list
+{
 	char              path[256];
 	uint16_t          u16path_len;
 	uint16_t          u16path[256];
@@ -43,7 +44,8 @@ int out_fd = 0;
 const uint8_t *omit_path(const char *path)
 {
 	const char *ret = strchr(path, '/');
-	if (ret) {
+	if (ret)
+	{
 		return ret + 1;
 	}
 	return path;
@@ -51,7 +53,8 @@ const uint8_t *omit_path(const char *path)
 
 int fworker(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
-	if (typeflag != FTW_F) {
+	if (typeflag != FTW_F)
+	{
 		return 0;
 	}
 	struct file_list *node = malloc(sizeof(struct file_list));
@@ -76,7 +79,8 @@ void mkpack()
 	uint64_t          ft_loc = sizeof(struct xp3_hdr);
 	int               count  = 0;
 	struct file_list *n      = last;
-	while (n) {
+	while (n)
+	{
 		++count;
 		n->z_size = zip_and_write(out_fd, n->solid_buf, n->size);
 		printf("[+] [zip] %s\n", omit_path(n->path));
@@ -92,7 +96,8 @@ void mkpack()
 	uint64_t           g_off   = sizeof(struct xp3_hdr);
 
 	n = last;
-	while (n) {
+	while (n)
+	{
 		struct entry_adlr adlr = {
 		    .magic   = mag_adlr,
 		    .this_sz = 0x04,
@@ -150,17 +155,22 @@ void mkpack()
 
 int main(int argc, char **argv)
 {
-	if (argc != 2) {
+	if (argc != 2)
+	{
 		printf("%s <dir>\n    output: <dir>.xp3\n", argv[0]);
 		return 1;
 	}
 
 	// copy a package file name
 	char out_fn[300] = {0};
-	for (int i = 0; argv[1][i]; ++i) {
-		if (strchr("./\\?!@#$%%^&*()-=+`~|\"\';:<>", argv[1][i]) != 0) {
+	for (int i = 0; argv[1][i]; ++i)
+	{
+		if (strchr("./\\?!@#$%%^&*()-=+`~|\"\';:<>", argv[1][i]) != 0)
+		{
 			out_fn[i] = '_';
-		} else {
+		}
+		else
+		{
 			out_fn[i] = argv[1][i];
 		}
 	}
@@ -168,7 +178,8 @@ int main(int argc, char **argv)
 
 	// create file
 	out_fd = open(out_fn, O_CREAT | O_TRUNC | O_RDWR, 0664);
-	if (out_fd < 0) {
+	if (out_fd < 0)
+	{
 		printf("[-] failed to create %s\n", out_fn);
 		return 1;
 	}
